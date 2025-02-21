@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente IA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            height: 90%;
+        }
+        .chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: #eef2f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .input-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        input {
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            flex: 1;
+        }
+        button {
+            padding: 15px;
+            border-radius: 5px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            height: 70%;
+            overflow-y: auto;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Assistente IA</h2>
+        <div class="chat-box" id="chat-box"></div>
+        <div id="loading">Carregando...</div>
+        <div class="input-box">
+            <input type="text" id="role-system" placeholder="Defina o tipo de assistente...">
+            <input type="text" id="pergunta" placeholder="Digite sua pergunta...">
+        </div>
+        <div class="input-box">
+            <button onclick="sendMessage()">Enviar</button>
+            <button onclick="clearChat()">Limpar</button>
+            <button onclick="openModal()">Abrir Histórico</button>
+        </div>
+    </div>
+
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="history-content"></div>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const roleSystem = document.getElementById('role-system').value;
+            const pergunta = document.getElementById('pergunta').value;
+            if (!pergunta) return;
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            const response = await fetch("http://127.0.0.1:5000/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role_system: roleSystem, pergunta })
+            });
+            
+            const data = await response.json();
+            document.getElementById('loading').style.display = 'none';
+            displayMessage("Você: " + pergunta);
+            displayMessage("IA: " + (data.resposta || data.erro));
+        }
+
+        async function loadHistory() {
+            const response = await fetch("http://127.0.0.1:5000/historico");
+            const history = await response.json();
+            document.getElementById("history-content").innerHTML = "<strong>Histórico:</strong><br>";
+            history.forEach(entry => {
+                displayMessage("Você: " + entry.pergunta, "history-content");
+                displayMessage("IA: " + entry.resposta, "history-content");
+            });
+        }
+
+        function displayMessage(message, targetId = "chat-box") {
+            const chatBox = document.getElementById(targetId);
+            chatBox.innerHTML += `<p>${message}</p>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function clearChat() {
+            document.getElementById("chat-box").innerHTML = "";
+        }
+
+        function openModal() {
+            document.getElementById("historyModal").style.display = "block";
+            loadHistory();
+        }
+
+        function closeModal() {
+            document.getElementById("historyModal").style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById("historyModal");
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
